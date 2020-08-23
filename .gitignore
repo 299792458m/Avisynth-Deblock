@@ -4,3 +4,5 @@ test
 *.suo
 *.user
 .vs
+/Src/Release
+/Src/Debug

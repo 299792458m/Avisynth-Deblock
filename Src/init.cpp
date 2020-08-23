@@ -3,7 +3,7 @@
 #include "deblock.h"
 
 AVSValue __cdecl Create_Deblock(AVSValue args, void*, IScriptEnvironment* env) {
-	enum { CLIP, QUANT, AOFFSET, BOFFSET, _PLANES };
+	enum { CLIP, QUANT, AOFFSET, BOFFSET, _PLANES, _OPT };
 	PClip input = args[CLIP].AsClip();
 	VideoInfo vi = input->GetVideoInfo();
 
@@ -16,13 +16,14 @@ AVSValue __cdecl Create_Deblock(AVSValue args, void*, IScriptEnvironment* env) {
 		input = env->Invoke("PointResize", AVSValue(sargs, 5), nargs).AsClip();
 	}
 
-	return new Deblock(input, args[QUANT].AsInt(25), args[AOFFSET].AsInt(0), args[BOFFSET].AsBool(0), args[_PLANES].AsString(), env);
+	return new Deblock(input, args[QUANT].AsInt(25), args[AOFFSET].AsInt(0), args[BOFFSET].AsBool(0), args[_PLANES].AsString(), args[_OPT].AsInt(0), env);
 }
 
 const AVS_Linkage *AVS_linkage = nullptr;
 
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3(IScriptEnvironment* env, const AVS_Linkage* const vectors) {
 	AVS_linkage = vectors;
-	env->AddFunction("Deblock", "c[quant]i[aOffset]i[bOffset]i[planes]s", Create_Deblock, 0);
+	env->AddFunction("Deblock", "c[quant]i[aOffset]i[bOffset]i[planes]s[opt]i", Create_Deblock, 0);
+	env->AddFunction("Deblock2", "c[quant]i[aOffset]i[bOffset]i[planes]s[opt]i", Create_Deblock, 0);
 	return "Blocks are kawaii uguu~!";
 }
