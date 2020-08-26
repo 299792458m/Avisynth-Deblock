@@ -579,12 +579,14 @@ inline void Deblock::deblockEdgeOPT(uint16_t* VS_RESTRICT dstp, const unsigned s
 
 template<typename T>
 inline void Deblock::deblockEdgeOPT8(T* VS_RESTRICT dstp, const unsigned stride, int mode) {
-	if (mode == HorProc)
+	if (mode == HorProc) {
 		deblockHorEdge(dstp, stride);
 		deblockHorEdge(dstp + 4, stride);
-	else
+	}
+	else {
 		deblockVerEdge(dstp, stride);
 		deblockVerEdge(dstp + stride * 4, stride);
+	}
 }
 
 template<>
@@ -615,8 +617,8 @@ inline void Deblock::deblockEdgeOPT8(uint8_t* VS_RESTRICT dstp, const unsigned s
 		sq2 = dstp + stride * 2;
 
 		sp2_16 = _mm_loadu_si64((__m128i*)sp2);	//本来はifの後でよい
-		sp1_16 = _mm_loadu_si64((__m128i*)sp1);
-		sp0_16 = _mm_loadu_si64((__m128i*)sp0);	//8個分
+		sp1_16 = _mm_loadu_si64((__m128i*)sp1);	//8個分
+		sp0_16 = _mm_loadu_si64((__m128i*)sp0);
 		sq0_16 = _mm_loadu_si64((__m128i*)sq0);
 		sq1_16 = _mm_loadu_si64((__m128i*)sq1);
 		sq2_16 = _mm_loadu_si64((__m128i*)sq2);	//本来はifの後でよい
@@ -656,44 +658,114 @@ inline void Deblock::deblockEdgeOPT8(uint8_t* VS_RESTRICT dstp, const unsigned s
 	else {		//垂直モードの時は転置処理
 		int out0, out1, out2, out3,out4,out5,out6,out7;
 		//transpose_8bit_4x4x2(sp1_16, sp0_16, sq0_16, sq1_16,out0, out1, out2, out3);	//4x4x2でやろうと思ったけど1つ目の結果(q1)がないと2つ目の計算ができないことに気が付いた・・・orz
-		//処理中のsp0はdstp[-3]で、出力先はdstp[-2]から
+		
 		transpose_8bit_8x4(sp1_16, sp0_16, sq0_16, sq1_16, out0, out1, out2, out3,out4,out5,out6,out7);
-		*(sp1 + 1) = out0;
-		*(sp0 + 1) = out1;
-		*(sq0 + 1) = out2;
-		*(sq1 + 1) = out3;
-		*(sq2 + 1) = out4;
-		*(sq3 + 1) = out5;
-		*(sq4 + 1) = out6;
-		*(sq5 + 1) = out7;
+		*(uint32_t*)(sp1 + 1) = out0;	//dstp - 3 + 1 = dstp-2
+		*(uint32_t*)(sp0 + 1) = out1;  //処理中のsp0はdstp[-3]で、出力先はdstp[-2]から
+		*(uint32_t*)(sq0 + 1) = out2;
+		*(uint32_t*)(sq1 + 1) = out3;
+		*(uint32_t*)(sq2 + 1) = out4;
+		*(uint32_t*)(sq3 + 1) = out5;
+		*(uint32_t*)(sq4 + 1) = out6;
+		*(uint32_t*)(sq5 + 1) = out7;
 	}
 }
 
 template<>
 inline void Deblock::deblockEdgeOPT8(uint16_t* VS_RESTRICT dstp, const unsigned stride, int mode) {
+
+	const uint16_t* sp2;
+	uint16_t* VS_RESTRICT sp1;
+	uint16_t* VS_RESTRICT sp0;
+	uint16_t* VS_RESTRICT sq0;
+	uint16_t* VS_RESTRICT sq1;
+	uint16_t* VS_RESTRICT sq2;
+	uint16_t* VS_RESTRICT sq3;
+	uint16_t* VS_RESTRICT sq4;
+	uint16_t* VS_RESTRICT sq5;
+
+	__m128i sp0_16, sp1_16, sq0_16, sq1_16, sp2_16, sq2_16;
+
+	if (mode == HorProc) {	//水平モード
+		sp2 = dstp - stride * 3;
+		sp1 = dstp - stride * 2;
+		sp0 = dstp - stride;
+		sq0 = dstp;
+		sq1 = dstp + stride;
+		sq2 = dstp + stride * 2;
+
+		sp2_16 = _mm_loadu_si128((__m128i*)sp2);
+		sp1_16 = _mm_loadu_si128((__m128i*)sp1);
+		sp0_16 = _mm_loadu_si128((__m128i*)sp0);
+		sq0_16 = _mm_loadu_si128((__m128i*)sq0);
+		sq1_16 = _mm_loadu_si128((__m128i*)sq1);
+		sq2_16 = _mm_loadu_si128((__m128i*)sq2);
+	}
+	else {
+		sp1 = dstp - 3;
+		sp0 = dstp - 3 + stride;
+		sq0 = dstp - 3 + stride * 2;
+		sq1 = dstp - 3 + stride * 3;
+		sq2 = dstp - 3 + stride * 4;
+		sq3 = dstp - 3 + stride * 5;
+		sq4 = dstp - 3 + stride * 6;
+		sq5 = dstp - 3 + stride * 7;
+
+		auto data0 = _mm_loadu_si128((__m128i*)sp1);	//読み込みは8個分(使うのは6個)
+		auto data1 = _mm_loadu_si128((__m128i*)sp0);
+		auto data2 = _mm_loadu_si128((__m128i*)sq0);
+		auto data3 = _mm_loadu_si128((__m128i*)sq1);
+		auto data4 = _mm_loadu_si128((__m128i*)sq2);
+		auto data5 = _mm_loadu_si128((__m128i*)sq3);
+		auto data6 = _mm_loadu_si128((__m128i*)sq4);
+		auto data7 = _mm_loadu_si128((__m128i*)sq5);
+
+		transpose_16bit_6x8(data0, data1, data2, data3, data4, data5, data6, data7,
+			sp2_16, sp1_16, sp0_16, sq0_16, sq1_16, sq2_16);
+
+	}
+
+	Deblock::deblockEdgeOPT_cal16_AVX2(sp2_16, sp1_16, sp0_16, sq0_16, sq1_16, sq2_16);
+
+
+	if (mode == HorProc) {	//水平モード
+		_mm_storeu_si128((__m128i*)sp1, sp1_16);
+		_mm_storeu_si128((__m128i*)sp0, sp0_16);
+		_mm_storeu_si128((__m128i*)sq0, sq0_16);
+		_mm_storeu_si128((__m128i*)sq1, sq1_16);
+	}
+	else {		//垂直モードの時は転置処理
+		__m128i out0, out1, out2, out3, out4, out5, out6, out7;
+		transpose_16bit_8x4(sp1_16, sp0_16, sq0_16, sq1_16, out0, out1, out2, out3, out4, out5, out6, out7);
+		_mm_storel_epi64((__m128i*)(sp1 + 1), out0);	//dstp - 3 + 1 = dstp-2
+		_mm_storel_epi64((__m128i*)(sp0 + 1), out1);
+		_mm_storel_epi64((__m128i*)(sq0 + 1), out2);
+		_mm_storel_epi64((__m128i*)(sq1 + 1), out3);
+		_mm_storel_epi64((__m128i*)(sq2 + 1), out4);
+		_mm_storel_epi64((__m128i*)(sq3 + 1), out5);
+		_mm_storel_epi64((__m128i*)(sq4 + 1), out6);
+		_mm_storel_epi64((__m128i*)(sq5 + 1), out7);
+	}
+
+
+}
+
+inline void Deblock::deblockEdgeOPT_cal16_AVX2(__m128i& sp2_16, __m128i& sp1_16, __m128i& sp0_16, __m128i& sq0_16, __m128i& sq1_16, __m128i& sq2_16)
+{
 	const int alpha = _alpha;
 	const int beta = _beta;
 	const int c0 = _c0;
 	const int c1 = _c1;
 
-	const uint16_t* sp2 = dstp - stride * 3;
-	uint16_t* VS_RESTRICT sp1 = dstp - stride * 2;
-	uint16_t* VS_RESTRICT sp0 = dstp - stride;
-	uint16_t* VS_RESTRICT sq0 = dstp;
-	uint16_t* VS_RESTRICT sq1 = dstp + stride;
-	const uint16_t* sq2 = dstp + stride * 2;
+	auto sp2_32 = _mm256_cvtepu16_epi32(sp2_16);
+	auto sp1_32 = _mm256_cvtepu16_epi32(sp1_16);
+	auto sp0_32 = _mm256_cvtepu16_epi32(sp0_16);	//AVX
+	auto sq0_32 = _mm256_cvtepu16_epi32(sq0_16);
+	auto sq1_32 = _mm256_cvtepu16_epi32(sq1_16);
+	auto sq2_32 = _mm256_cvtepu16_epi32(sq2_16);
 
 	//for (unsigned i = 0; i < 4; i++) {
 		//if (std::abs(sp0[i] - sq0[i]) < alpha && std::abs(sp1[i] - sp0[i]) < beta && std::abs(sq0[i] - sq1[i]) < beta) {
-	auto sp1_128 = _mm_loadu_si128((__m128i*)sp1);
-	auto sp0_128 = _mm_loadu_si128((__m128i*)sp0);
-	auto sq0_128 = _mm_loadu_si128((__m128i*)sq0);
-	auto sq1_128 = _mm_loadu_si128((__m128i*)sq1);
-	auto sp1_32 = _mm256_cvtepu16_epi32(sp1_128);
-	auto sp0_32 = _mm256_cvtepu16_epi32(sp0_128);	//AVX
-	auto sq0_32 = _mm256_cvtepu16_epi32(sq0_128);
-	auto sq1_32 = _mm256_cvtepu16_epi32(sq1_128);
-
 	auto tsub = _mm256_sub_epi32(sp0_32, sq0_32);
 	auto tabs = _mm256_abs_epi32(tsub);			//
 	auto mask1 = _mm256_cmpgt_epi32(_mm256_set1_epi32(alpha), tabs);	//AVX2ではgt命令しかないみたい
@@ -715,10 +787,6 @@ inline void Deblock::deblockEdgeOPT8(uint16_t* VS_RESTRICT dstp, const unsigned 
 		//	const int ap = std::abs(sp2[i] - sp0[i]);
 		//	const int aq = std::abs(sq2[i] - sq0[i]);
 
-		auto sp2_128 = _mm_loadu_si128((__m128i*)sp2);
-		auto sq2_128 = _mm_loadu_si128((__m128i*)sq2);
-		auto sp2_32 = _mm256_cvtepu16_epi32(sp2_128);
-		auto sq2_32 = _mm256_cvtepu16_epi32(sq2_128);
 
 		tsub = _mm256_sub_epi32(sp2_32, sp0_32);
 		auto ap_32 = _mm256_abs_epi32(tsub);
@@ -784,16 +852,14 @@ inline void Deblock::deblockEdgeOPT8(uint16_t* VS_RESTRICT dstp, const unsigned 
 		sp0_32 = _mm256_add_epi32(sp0_32, temp);
 		sp0_32 = _mm256_max_epi32(sp0_32, _mm256_setzero_si256());
 		sp0_32 = _mm256_min_epi32(sp0_32, _mm256_set1_epi32(_peak));
-		sp0_32 = _mm256_packus_epi32(sp0_32, _mm256_permute2x128_si256(sp0_32, sp0_32,1));
-		sp0_128 = _mm256_extracti128_si256(sp0_32, 0);
-		_mm_store_si128((__m128i*)sp0, sp0_128);
+		sp0_32 = _mm256_packus_epi32(sp0_32, _mm256_permute2x128_si256(sp0_32, sp0_32, 1));
+		sp0_16 = _mm256_extracti128_si256(sp0_32, 0);
 
 		sq0_32 = _mm256_sub_epi32(sq0_32, temp);
 		sq0_32 = _mm256_max_epi32(sq0_32, _mm256_setzero_si256());
 		sq0_32 = _mm256_min_epi32(sq0_32, _mm256_set1_epi32(_peak));
-		sq0_32 = _mm256_packus_epi32(sq0_32, _mm256_permute2x128_si256(sq0_32, sq0_32,1));
-		sq0_128 = _mm256_extracti128_si256(sq0_32, 0);
-		_mm_store_si128((__m128i*)sq0, sq0_128);
+		sq0_32 = _mm256_packus_epi32(sq0_32, _mm256_permute2x128_si256(sq0_32, sq0_32, 1));
+		sq0_16 = _mm256_extracti128_si256(sq0_32, 0);
 
 		//if (ap < beta)
 		//	sp1[i] += deltap1;
@@ -803,79 +869,17 @@ inline void Deblock::deblockEdgeOPT8(uint16_t* VS_RESTRICT dstp, const unsigned 
 		temp = _mm256_and_si256(mask4, deltap1_32);	//ifの
 		temp = _mm256_and_si256(mask, temp);			//分岐に入るかどうか
 		sp1_32 = _mm256_add_epi32(sp1_32, temp);
-		sp1_32 = _mm256_packus_epi32(sp1_32, _mm256_permute2x128_si256(sp1_32,sp1_32,1));
-		sp1_128 = _mm256_extracti128_si256(sp1_32, 0);
-		_mm_store_si128((__m128i*)sp1, sp1_128);
+		sp1_32 = _mm256_packus_epi32(sp1_32, _mm256_permute2x128_si256(sp1_32, sp1_32, 1));
+		sp1_16 = _mm256_extracti128_si256(sp1_32, 0);
 
 		temp = _mm256_and_si256(mask5, deltaq1_32);	//ifの
 		temp = _mm256_and_si256(mask, temp);			//分岐に入るかどうか
 		sq1_32 = _mm256_add_epi32(sq1_32, temp);
-		sq1_32 = _mm256_packus_epi32(sq1_32, _mm256_permute2x128_si256(sq1_32, sq1_32,1));
-		sq1_128 = _mm256_extracti128_si256(sq1_32, 0);
-		_mm_store_si128((__m128i*)sq1, sq1_128);
-		//}
+		sq1_32 = _mm256_packus_epi32(sq1_32, _mm256_permute2x128_si256(sq1_32, sq1_32, 1));
+		sq1_16 = _mm256_extracti128_si256(sq1_32, 0);
+
 	}
-
 }
-
-template<typename T>
-inline void Deblock::deblockVerEdgeOPT(T* VS_RESTRICT dstp, const unsigned stride) {
-	deblockVerEdge(dstp, stride);
-}
-
-template<>
-inline void Deblock::deblockVerEdgeOPT(uint16_t* VS_RESTRICT dstp, const unsigned stride) noexcept {
-	const int alpha = _alpha;
-	const int beta = _beta;
-	const int c0 = _c0;
-	const int c1 = _c1;
-
-	for (unsigned i = 0; i < 4; i++) {
-		auto data = _mm_loadu_si64((__m128i*)(dstp + 0- 2));	//[1],[0],[-1],[-2]
-		data = _mm_cvtepu16_epi32(data);
-		auto temp= _mm_srli_si128(data,4);		//0,[1],[0],[-1]
-		auto tsub = _mm_sub_epi32(temp, data);
-		auto tabs = _mm_abs_epi32(tsub);
-		auto mask = _mm_cmplt_epi32(tabs, _mm_set_epi32(INT32_MAX, beta, alpha, beta));
-
-		//if (abs(datp1 - datp0) < beta && abs(datp0 - datm1) < alpha && abs(datm1 - datm2) < beta)
-		if (_mm_test_all_ones(mask))
-		{
-
-			const uint16_t datm2 = dstp[-2];
-			const uint16_t datm1 = dstp[-1];
-			const uint16_t datp0 = dstp[0];
-			const uint16_t datp1 = dstp[1];
-
-			const uint16_t datp2 = dstp[2];
-			const uint16_t datm3= dstp[-3];
-
-			const int ap = abs(datp2 - datp0);
-			const int aq = abs(datm3 - datm1);
-
-			int c = c0;
-			if (aq < beta)
-				c += c1;
-			if (ap < beta)
-				c += c1;
-
-			const int avg = (datp0 + datm1 + 1) >> 1;
-			const int delta = min(max(((datp0 - datm1) * 4 + datm2 - datp1 + 4) >> 3, -c), c);
-			const int deltaq1 = min(max((datp2 + avg - datp1 * 2) >> 1, -c0), c0);
-			const int deltap1 = min(max((datm3 + avg - datm2 * 2) >> 1, -c0), c0);
-
-			dstp[0] = min(max(datp0 - delta, 0), _peak);
-			dstp[-1] = min(max(datm1 + delta, 0), _peak);
-			if (ap < beta)
-				dstp[1] += deltaq1;
-			if (aq < beta)
-				dstp[-2] += deltap1;
-		}
-		dstp += stride;
-	}
-
-}
-
 
 template<typename T>
 void Deblock::Process(PVideoFrame &dst, IScriptEnvironment *env) noexcept {
@@ -897,14 +901,72 @@ void Deblock::Process(PVideoFrame &dst, int plane, IScriptEnvironment *env) noex
 	T * VS_RESTRICT dstp = reinterpret_cast<T *>(dst->GetWritePtr(plane));
 	T * VS_RESTRICT dstp0 = dstp;
 
-	if (_opt == 3) {	//AVX2(16bitの時だけ必要 float未対応・・・)
-		for (unsigned x = 4; x < width; x += 4)
-			deblockEdgeOPT(dstp + x, stride, VerProc);
+	if (_opt == 4) {	//速度は速いが結果は変わる・・・
+		for (unsigned x = 4; x < width; x += 4) {
+			deblockEdgeOPT(dstp + x, stride, VerProc);//先頭行(hor処理しない)
+		}
+		dstp += stride * 4;
 
+		unsigned y = 4;
+		for (; y < height-7; y += 8) {
+			deblockEdgeOPT(dstp, stride, HorProc);	//2行目以降の最初の4列分(ver処理しない)
+
+			unsigned x = 4;
+			if constexpr ((std::is_same<T, uint8_t>::value) || (std::is_same<T, uint16_t>::value)) {
+				for (; x < width - 7; x += 8) {
+					//HorEdge
+					deblockEdgeOPT8(dstp + x, stride, HorProc);
+					deblockEdgeOPT8(dstp + x + stride * 4, stride, HorProc);
+					deblockEdgeOPT8(dstp + x, stride, VerProc);			deblockEdgeOPT8(dstp + x + 4, stride, VerProc);
+					//deblockEdgeOPT(dstp + x, stride, VerProc);			deblockEdgeOPT(dstp + x + 4, stride, VerProc);
+					//deblockEdgeOPT(dstp + x + stride * 4, stride, VerProc);			deblockEdgeOPT(dstp + x + stride * 4 + 4, stride, VerProc);
+				}
+			}
+			//residue
+			for (; x < width-3; x += 4) {
+				//HorEdge
+				deblockEdgeOPT(dstp + x, stride, HorProc);
+				deblockEdgeOPT(dstp + x + stride * 4, stride, HorProc);
+				//VerEdge
+				deblockEdgeOPT8(dstp + x, stride, VerProc);
+				//deblockEdgeOPT(dstp + x + stride * 4, stride, VerProc);
+			}
+
+			dstp += stride * 8;
+		}
+		//residue
+		for (; y < height - 3; y += 4) {
+			deblockEdgeOPT(dstp, stride, HorProc);	//2行目以降の最初の4列分(ver処理しない)
+
+			unsigned x = 4;
+			if constexpr ((std::is_same<T, uint8_t>::value) || (std::is_same<T, uint16_t>::value)) {
+				for (; x < width - 7; x += 8) {
+					//HorEdge
+					deblockEdgeOPT8(dstp + x, stride, HorProc);
+					deblockEdgeOPT(dstp + x, stride, VerProc);			deblockEdgeOPT(dstp + x + 4, stride, VerProc);
+					//deblockEdgeOPT(dstp + x + stride * 4, stride, VerProc);			deblockEdgeOPT(dstp + x + stride * 4 + 4, stride, VerProc);
+				}
+			}
+			//residue
+			for (; x < width - 3; x += 4) {
+				//HorEdge
+				deblockEdgeOPT(dstp + x, stride, HorProc);
+				//VerEdge
+				deblockEdgeOPT(dstp + x + stride * 4, stride, VerProc);
+			}
+
+			dstp += stride * 4;
+		}
+
+	}
+	else if (_opt == 3) {	//AVX2(16bitの時だけ必要 float未対応・・・)
+		for (unsigned x = 4; x < width; x += 4) {
+			deblockEdgeOPT(dstp + x, stride, VerProc);//先頭行(hor処理しない)
+		}
 		dstp += stride * 4;
 
 		for (unsigned y = 4; y < height; y += 4) {
-			deblockEdgeOPT(dstp, stride, HorProc);
+			deblockEdgeOPT(dstp, stride, HorProc);	//2行目以降の最初の4列分(ver処理しない)
 
 			unsigned x = 4;
 			if constexpr ((std::is_same<T, uint8_t>::value)|| (std::is_same<T, uint16_t>::value)) {
@@ -928,9 +990,9 @@ void Deblock::Process(PVideoFrame &dst, int plane, IScriptEnvironment *env) noex
 		}
 	}
 	else if (_opt == 2) {	//SSE4
-		for (unsigned x = 4; x < width; x += 4)
+		for (unsigned x = 4; x < width; x += 4) {
 			deblockEdgeOPT(dstp + x, stride, VerProc);
-
+		}
 		dstp += stride * 4;
 
 		for (unsigned y = 4; y < height; y += 4) {
@@ -1030,10 +1092,9 @@ Deblock::Deblock(PClip child, int quant, int aOffset, int bOffset, const char* p
 	else if (opt == 1)
 		_opt = 1;													//C
 	else {
-		env->ThrowError("Deblock: wrong opt parameter! must be 0 to 3");
-		//_opt = opt;
+		//env->ThrowError("Deblock: wrong opt parameter! must be 0 to 3");
+		_opt = opt;
 	}
-
 }
 
 PVideoFrame Deblock::GetFrame(int n, IScriptEnvironment *env) {
