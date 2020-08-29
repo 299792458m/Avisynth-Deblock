@@ -12,3 +12,5 @@ Deblock (clip, quant=25, aOffset=0, bOffset=0, planes="yuv")
 * *aOffset* - quant modifier to the blocking detector threshold. Setting it higher means than more edges will deblocked.
 * *bOffset* - another quant modifier, for block detecting and for deblocking's strength. There again, the higher, the stronger.
 * *planes* - specifies which planes to process between y, u and v.
+
+* *opt* - 0:auto  1:c 2:sse4.2 3:AVX2 (only 8-16bit int is SIMDed not float...)
