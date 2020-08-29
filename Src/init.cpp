@@ -24,6 +24,5 @@ const AVS_Linkage *AVS_linkage = nullptr;
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3(IScriptEnvironment* env, const AVS_Linkage* const vectors) {
 	AVS_linkage = vectors;
 	env->AddFunction("Deblock", "c[quant]i[aOffset]i[bOffset]i[planes]s[opt]i", Create_Deblock, 0);
-	env->AddFunction("Deblock2", "c[quant]i[aOffset]i[bOffset]i[planes]s[opt]i", Create_Deblock, 0);
 	return "Blocks are kawaii uguu~!";
 }

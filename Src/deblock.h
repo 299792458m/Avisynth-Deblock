@@ -45,8 +45,9 @@ private:
     template<>
     void deblockEdgeOPT8(uint16_t* VS_RESTRICT dstp, const unsigned stride, int mode);
 
-    void deblockEdgeOPT_cal8_sse4(__m128i& sp2_16, __m128i& sp1_16, __m128i& sp0_16, __m128i& sq0_16, __m128i& sq1_16, __m128i& sq2_16);
-    void deblockEdgeOPT_cal16_AVX2(__m128i& sp2_16, __m128i& sp1_16, __m128i& sp0_16, __m128i& sq0_16, __m128i& sq1_16, __m128i& sq2_16);
+    void deblockEdgeOPT_cal8bit_sse4(__m128i& sp2_8, __m128i& sp1_8, __m128i& sp0_8, __m128i& sq0_8, __m128i& sq1_8, __m128i& sq2_8);
+    void deblockEdgeOPT_cal16bit_sse4(__m128i& sp2_16, __m128i& sp1_16, __m128i& sp0_16, __m128i& sq0_16, __m128i& sq1_16, __m128i& sq2_16);
+    void deblockEdgeOPT_cal16bit_AVX2(__m128i& sp2_16, __m128i& sp1_16, __m128i& sp0_16, __m128i& sq0_16, __m128i& sq1_16, __m128i& sq2_16);
 
 	bool _process[3];
 	int _alpha, _beta, _c0, _c1;

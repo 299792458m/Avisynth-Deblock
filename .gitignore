@@ -6,3 +6,5 @@ test
 .vs
 /Src/Release
 /Src/Debug
+/Src/x64/Release/Deblock.tlog
+/Src/x64/Release
