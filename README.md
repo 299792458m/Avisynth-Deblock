@@ -14,7 +14,7 @@ Deblock (clip, quant=25, aOffset=0, bOffset=0, planes="yuv")
 * *planes* - specifies which planes to process between y, u and v.
 
 ### MODed by 299792458m
-original dll not fast as I expected. so this version was add SIMD opt.  
+original dll wasn't so fast as I expected. so this version was added SIMD optimazation.  
 added parameter
 * *opt* - 0:auto  1:c 2:sse4.2 3:AVX2 (only 8-16bit int is SIMDed not float...)
 
