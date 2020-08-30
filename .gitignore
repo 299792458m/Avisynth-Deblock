@@ -4,7 +4,8 @@ test
 *.suo
 *.user
 .vs
-/Src/Release
-/Src/Debug
-/Src/x64/Release/Deblock.tlog
-/Src/x64/Release
+/Src/Release/*
+/Src/Debug/*
+/Src/x64/Release/*
+!/Src/Release/Deblock.dll
+!/Src/x64/Release/Deblock.dll
